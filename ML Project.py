@@ -151,4 +151,4 @@ def plotQuadDisc(data):
 
 if __name__ == "__main__":
     pass
-processData()
+    processData()
