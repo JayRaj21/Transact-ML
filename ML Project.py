@@ -36,22 +36,21 @@ output:
 
 Data processing:
 Manually editing csv data to include valid columns and combine redundant data entries
-
 """
 
 #interpret and process the data
 # RAW_DATA = pd.read_csv("credit_transactions.csv")
 # RAW_DATA = pd.read_csv("Credit_Transactions_Cleaned.csv")
 RAW_DATA = pd.read_csv("Credit_Transactions_Cleaned_v2.csv")
-TRANSACT_DATA = RAW_DATA[RAW_DATA["Amount"] <= 0].copy()
-TRANSACT_DATA["Amount"] = TRANSACT_DATA["Amount"] * -1
+SPENDING_DATA = RAW_DATA[RAW_DATA["Amount"] <= 0].copy()
+SPENDING_DATA["Amount"] = SPENDING_DATA["Amount"] * -1
 
 categorizedTransacts = dict()
 categorizedDates = dict()
-for i in range(len(TRANSACT_DATA["Amount"])):
-    amount = TRANSACT_DATA["Amount"][i]
-    date = TRANSACT_DATA["Effective Date"][i]
-    description = TRANSACT_DATA["Extended Description"][i]
+for i in range(len(SPENDING_DATA["Amount"])):
+    amount = SPENDING_DATA["Amount"][i]
+    date = SPENDING_DATA["Effective Date"][i]
+    description = SPENDING_DATA["Extended Description"][i]
     if description not in categorizedTransacts.keys():
         categorizedTransacts[description], categorizedDates[description] = list(), list()
         categorizedTransacts[description].append(amount)
@@ -64,14 +63,10 @@ for i in range(len(TRANSACT_DATA["Amount"])):
 for i, j in categorizedDates.items():
     categorizedDates[i] = [datetime.strptime(d, "%m/%d/%Y") for d in j]
 
-groupedPairs = dict() 
-datesByWeek = dict()
 transacByWeek = dict()
-
 for category in categorizedDates.keys():
     categDates = categorizedDates[category]
     categTransac = categorizedTransacts[category]
-
     weeklyPairs = defaultdict(list)
     weeklyDates = defaultdict(list)
     weeklyTransac = defaultdict(list)
@@ -85,8 +80,6 @@ for category in categorizedDates.keys():
         weeklyDates[key].append(date)
         weeklyTransac[key].append(transac)
 
-    groupedPairs[category] = dict(weeklyPairs)
-    datesByWeek[category] = dict(weeklyDates)
     transacByWeek[category] = dict(weeklyTransac)
 
 weeklyMeans = dict()
@@ -95,18 +88,15 @@ for category, weeks in transacByWeek.items():
     for key, tx_list in weeks.items():
         weeklyMeans[category][key] = [np.mean(tx_list), np.var(tx_list)]
 
-inputData = []
+processedData = []
 for i, j in weeklyMeans.items():
     temp = []
     for k, v in j.items():
-        # print(f"{k}, {v}, {i}")
-        inputData.append([float(v[0]), float(v[1]), i])
+        processedData.append([float(v[0]), float(v[1]), i])
 
 #frequency based decision rule
-categoryFreq = dict()
-classLabels = dict()
-count = 0
-for i in TRANSACT_DATA["Extended Description"]:
+categoryFreq, classLabels, count = dict(), dict(), 0
+for i in SPENDING_DATA["Extended Description"]:
     if i in categoryFreq.keys():
         categoryFreq[i]+=1
 
@@ -115,17 +105,11 @@ for i in TRANSACT_DATA["Extended Description"]:
         classLabels[i] = count
         count+=1
 
-totalPurchases = sum(categoryFreq.values())
-classRules = dict()
+totalPurchases, classRules = sum(categoryFreq.values()), dict()
 for i in categoryFreq.keys():
     classRules[i] = (categoryFreq[i])/totalPurchases
 
-# for i, j in categoryFreq.items():
-#     print(f"{i}: {j}")
-
-# for i, j in classLabels.items():
-#     print(f"{i}: {j}")
-
+# function for implementing a k means clustering
 def plotKMeans(xTrain, yTrain, xTest, yTest, k):
     model = KMeans(n_clusters=k)
     model.fit(xTrain, yTrain)
@@ -142,7 +126,7 @@ def plotKMeans(xTrain, yTrain, xTest, yTest, k):
     # print(model.score(xTrain, yTrain))
     return
 
-
+# function for implementing SVM classifier
 def plotSVM(xTrain, yTrain, xTest, yTest):
     #computing using linear kernal
     linearModel = svm.SVC(kernel = "linear")
@@ -189,7 +173,7 @@ def plotSVM(xTrain, yTrain, xTest, yTest):
 
 
     print(f"Linear Kernel = {(linearModel.score(xTest, yTest))}")
-    print(f"RBF Kernel= {(rbfModel.score(xTest, yTest))}")
+    print(f"RBF Kernel = {(rbfModel.score(xTest, yTest))}")
 
     cm = confusion_matrix(yTrain, linPredict)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(yTrain))
@@ -204,13 +188,12 @@ def plotSVM(xTrain, yTrain, xTest, yTest):
     plt.show()
     return
 
-
+# function for implementing a decision tree classifier
 def plotDecisionTree(xTrain, yTrain, xTest, yTest):
     treeModel = DecisionTreeClassifier(criterion="gini")
     treeModel.fit(xTrain, yTrain)
     pred = treeModel.predict(xTrain)
     print(f"Gini Impurity = {(treeModel.score(xTrain, yTrain))}")
-    # print(treeModel.score(xTest, yTest))
 
     cm = confusion_matrix(yTrain, pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(yTrain))
@@ -219,10 +202,10 @@ def plotDecisionTree(xTrain, yTrain, xTest, yTest):
     plt.show()
     return
 
-
+# main code execution
 if __name__ == "__main__":
     pass
-    data = np.array(inputData)
+    data = np.array(processedData)
     for i in range(data.shape[0]):
         if categoryFreq[data[i, 2]] < 30:
             data[i, 2] = "Miscellaneous"
@@ -243,9 +226,6 @@ if __name__ == "__main__":
         if data[i, 2] == "Miscellaneous":
             data[i, 2] = maxLabel + 1
 
-    # for i in range(data.shape[0]):
-    #     print(data[i,:])
-
     # shuffled = np.array(twoClassData)
     # # rng = np.random.default_rng()
     # # permuted = rng.permutation(shuffled,axis=0)
@@ -259,8 +239,6 @@ if __name__ == "__main__":
     # labelTrain = shuffled[:split,2]
     # labelTest = shuffled[split:2]
     inputTrain, inputTest, labelTrain, labelTest = train_test_split(data[:, 0:2], data[:, 2], test_size=0.2, random_state=None)
-    
-
     # inputScalar = preprocessing.StandardScaler().fit_transform(inputTrain)
     plotKMeans(inputTrain, labelTrain, inputTest, labelTest, 5)
     plotSVM(inputTrain, labelTrain, inputTest, labelTest)
