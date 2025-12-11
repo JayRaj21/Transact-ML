@@ -38,13 +38,12 @@ Data processing:
 Manually editing csv data to include valid columns and combine redundant data entries
 """
 
-#interpret and process the data
-# RAW_DATA = pd.read_csv("credit_transactions.csv")
-# RAW_DATA = pd.read_csv("Credit_Transactions_Cleaned.csv")
+# importing data from CSV file in the same directory
 RAW_DATA = pd.read_csv("Credit_Transactions_Cleaned_v2.csv")
 SPENDING_DATA = RAW_DATA[RAW_DATA["Amount"] <= 0].copy()
 SPENDING_DATA["Amount"] = SPENDING_DATA["Amount"] * -1
 
+# separates and categorizes spending by weekly and description
 categorizedTransacts = dict()
 categorizedDates = dict()
 for i in range(len(SPENDING_DATA["Amount"])):
@@ -82,14 +81,16 @@ for category in categorizedDates.keys():
 
     transacByWeek[category] = dict(weeklyTransac)
 
-weeklyMeans = dict()
+#calculating the mean and variance spending in a weekly interval
+weeklyMeansVar = dict()
 for category, weeks in transacByWeek.items():
-    weeklyMeans[category] = {}
+    weeklyMeansVar[category] = {}
     for key, tx_list in weeks.items():
-        weeklyMeans[category][key] = [np.mean(tx_list), np.var(tx_list)]
+        weeklyMeansVar[category][key] = [np.mean(tx_list), np.var(tx_list)]
 
+# aggregates data in format that can be accepted by scikit-learn algos
 processedData = []
-for i, j in weeklyMeans.items():
+for i, j in weeklyMeansVar.items():
     temp = []
     for k, v in j.items():
         processedData.append([float(v[0]), float(v[1]), i])
