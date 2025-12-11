@@ -1,13 +1,9 @@
 from sklearn import svm
-from sklearn.linear_model import LogisticRegression
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.cluster import KMeans
 from sklearn.tree import DecisionTreeClassifier
 import pandas as pd
-import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
 from datetime import datetime
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
@@ -123,7 +119,9 @@ def plotKMeans(xTrain, yTrain, xTest, yTest, k):
     # plt.xlabel("x data")
     # plt.ylabel("y data")
     # plt.show()
+
     print(f"SSE = {-(model.score(xTrain, yTrain))}")
+    print(f"SSE = {-(model.score(xTest, yTest))}")
     # print(model.score(xTrain, yTrain))
     return
 
@@ -205,7 +203,6 @@ def plotDecisionTree(xTrain, yTrain, xTest, yTest):
 
 # main code execution
 if __name__ == "__main__":
-    pass
     data = np.array(processedData)
     for i in range(data.shape[0]):
         if categoryFreq[data[i, 2]] < 30:
@@ -235,8 +232,8 @@ if __name__ == "__main__":
     # plotpermuted = permuted[:,0:2].astype(np.float64)
 
     # split = int(shuffled.shape[0]*.8)
-    # inputTrain = shuffled[:split,0:2]
-    # inputTest = shuffled[split:,0:2]
+    # inputTrain = shuffled[:split, 0:2]
+    # inputTest = shuffled[split:, 0:2]
     # labelTrain = shuffled[:split,2]
     # labelTest = shuffled[split:2]
     inputTrain, inputTest, labelTrain, labelTest = train_test_split(data[:, 0:2], data[:, 2], test_size=0.2, random_state=None)
