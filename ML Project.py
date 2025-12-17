@@ -14,24 +14,6 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 This is is a classification problem. In a broad context, 
 I am trying to identify spending patterns. I want to identify 
 groups of high spending and predict
-
-Problem statement:
-
-What is my input: 
-
-What is my output:
-
-Identify the best train/test split for the data: 60/40, 70/30, 80/20
-Use accuracy score and decision boundary plots to determine best fit
-
-input:[[mean spending, variance, prob of class n]]
-
-labels: a vector a labels corresponding to the input data
-
-output: 
-
-Data processing:
-Manually editing csv data to include valid columns and combine redundant data entries
 """
 
 # importing data from CSV file in the same directory
@@ -58,6 +40,20 @@ for i in range(len(SPENDING_DATA["Amount"])):
 for i, j in categorizedDates.items():
     categorizedDates[i] = [datetime.strptime(d, "%m/%d/%Y") for d in j]
 
+def get_week_number(dt):
+# Getting the year and week number using iso calendar
+    return dt.isocalendar()[0], dt.isocalendar()[1]
+
+# Create a dictionary to hold the frequency count per week for each category
+weekly_frequency = defaultdict(lambda: defaultdict(int))
+
+# Process each spending category
+for category, timestamps in categorizedDates.items():
+    for timestamp in timestamps:
+        year, week = get_week_number(timestamp)
+
+        weekly_frequency[category][(year, week)] += 1
+
 transacByWeek = dict()
 for category in categorizedDates.keys():
     categDates = categorizedDates[category]
@@ -83,13 +79,10 @@ for category, weeks in transacByWeek.items():
     weeklyMeansVar[category] = {}
     for key, tx_list in weeks.items():
         weeklyMeansVar[category][key] = [np.mean(tx_list), np.var(tx_list)]
-
-# aggregates data in format that can be accepted by scikit-learn algos
-processedData = []
-for i, j in weeklyMeansVar.items():
-    temp = []
-    for k, v in j.items():
-        processedData.append([float(v[0]), float(v[1]), i])
+    
+for category, weeks in weekly_frequency.items():
+   for key, freq in weeks.items():
+        weeklyMeansVar[category][key].append(freq)
 
 #frequency based decision rule
 categoryFreq, classLabels, count = dict(), dict(), 0
@@ -106,139 +99,184 @@ totalPurchases, classRules = sum(categoryFreq.values()), dict()
 for i in categoryFreq.keys():
     classRules[i] = (categoryFreq[i])/totalPurchases
 
+# aggregates data in format that can be accepted by scikit-learn algos
+processedData = []
+for i, j in weeklyMeansVar.items():
+    temp = []
+    for k, v in j.items():
+        processedData.append([float(v[0]), float(v[1]), int(v[2]), i])
+
 # function for implementing a k means clustering
 def plotKMeans(xTrain, yTrain, xTest, yTest, k):
     model = KMeans(n_clusters=k)
     model.fit(xTrain, yTrain)
     predictor = model.fit_predict(xTrain, yTrain)
 
-    # for i in tqdm(range(predictor.shape[0])):
-    #     # plt.scatter(x=predictor[i, 0], y = predictor[i, 1], marker = "x", color = "r")
-    #     print(predictor[i])
-    # plt.title("K Means Clustering")
-    # plt.xlabel("x data")
-    # plt.ylabel("y data")
-    # plt.show()
+    for i in range(predictor.shape[0]):
+        if predictor[i] == 1:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "r")
+        
+        elif predictor[i] == 2:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "g")
 
-    print(f"SSE = {-(model.score(xTrain, yTrain))}")
-    print(f"SSE = {-(model.score(xTest, yTest))}")
-    # print(model.score(xTrain, yTrain))
+        elif predictor[i] == 3:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "y")
+
+        elif predictor[i] == 4:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "m")
+
+        elif predictor[i] == 5:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "k")
+    
+    plt.title("K Means")
+    plt.xlabel("Mean")
+    plt.ylabel("Variance")
+    plt.show()
+
+    print(f"Train SSE = {-(model.score(xTrain, yTrain))}")
+    print(f"Test SSE = {-(model.score(xTest, yTest))}")
     return
 
 # function for implementing SVM classifier
-def plotSVM(xTrain, yTrain, xTest, yTest):
+def plotSVM(xTrain, yTrain, xTest, yTest, cm = False, TRAIN_OR_TEST = 0):
     #computing using linear kernal
     linearModel = svm.SVC(kernel = "linear")
     linearModel.fit(xTrain, yTrain)
     linPredict = linearModel.predict(xTrain)
 
-    # for i in range(linPredict.shape[0]):
-    #     if linPredict[i] == 1:
-    #         plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "x", color = "r")
+    for i in range(linPredict.shape[0]):
+        if linPredict[i] == "1":
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "r")
         
-    #     elif linPredict[i] == 2:
-    #         plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "g")
+        elif linPredict[i] == "2":
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "g")
 
-    #     else:
-    #         plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "*", color = "b")
+        elif linPredict[i] == "3":
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "y")
+
+        elif linPredict[i] == "4":
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "m")
+
+        else:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "k")
     
-    # plt.title("SVM with linear kernal")
-    # plt.xlabel("x data")
-    # plt.ylabel("y data")
-    # plt.show()
+    plt.title("SVM with linear kernal")
+    plt.xlabel("Mean")
+    plt.ylabel("Variance")
+    plt.show()
 
     #computing using radial basis function kernal
     rbfModel = svm.SVC(kernel = "rbf")
     rbfModel.fit(xTrain, yTrain)
     rbfPredict = rbfModel.predict(xTrain[:, 0:2])
 
-    # for i in range(rbfPredict.shape[0]):
-    #     if rbfPredict[i] == 1:
-    #         plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "x", color = "r")
+    for i in range(rbfPredict.shape[0]):
+        if rbfPredict[i] == "1":
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "r")
         
-    #     elif rbfPredict[i] == 2:
-    #         plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "g")
+        elif rbfPredict[i] == "2":
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "g")
 
-    #     else:
-    #         plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "*", color = "b")
+        elif rbfPredict[i] == "3":
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "y")
+
+        elif rbfPredict[i] == "4":
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "m")
+
+        else:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "k")
     
-    # plt.title("SVM with Radial Kernal")
-    # plt.xlabel("x data")
-    # plt.ylabel("y data")
-    # plt.show()
-
-    # print(f"Linear Kernel = {(linearModel.score(xTrain, yTrain))}")
-    # print(f"RBF Kernel= {(rbfModel.score(xTrain, yTrain))}")
-
-
-    print(f"Linear Kernel = {(linearModel.score(xTest, yTest))}")
-    print(f"RBF Kernel = {(rbfModel.score(xTest, yTest))}")
-
-    cm = confusion_matrix(yTrain, linPredict)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(yTrain))
-    disp.plot(cmap=plt.cm.Blues)
-    plt.title('Linear Kernel CM')
+    plt.title("SVM with RBF kernal")
+    plt.xlabel("Mean")
+    plt.ylabel("Variance")
     plt.show()
 
-    cm = confusion_matrix(yTrain, rbfPredict)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(yTrain))
-    disp.plot(cmap=plt.cm.Blues)
-    plt.title('RBF Kernel CM')
-    plt.show()
+
+    print(f"Linear Kernel (Train) = {(linearModel.score(xTrain, yTrain))}")
+    print(f"Linear Kernel (Test) = {(linearModel.score(xTest, yTest))}")
+    print(f"RBF Kernel (Train) = {(rbfModel.score(xTrain, yTrain))}")
+    print(f"RBF Kernel (Test) = {(rbfModel.score(xTest, yTest))}")
+
+    # display confusion matrix for class assignments
+    if cm:
+        cm = confusion_matrix(yTrain, linPredict)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(yTrain))
+        disp.plot(cmap=plt.cm.Blues)
+        plt.title('Linear Kernel CM')
+        plt.show()
+
+        cm = confusion_matrix(yTrain, rbfPredict)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(yTrain))
+        disp.plot(cmap=plt.cm.Blues)
+        plt.title('RBF Kernel CM')
+        plt.show()
     return
 
 # function for implementing a decision tree classifier
-def plotDecisionTree(xTrain, yTrain, xTest, yTest):
+def plotDecisionTree(xTrain, yTrain, xTest, yTest, cm = False):
     treeModel = DecisionTreeClassifier(criterion="gini")
     treeModel.fit(xTrain, yTrain)
     pred = treeModel.predict(xTrain)
-    print(f"Gini Impurity = {(treeModel.score(xTrain, yTrain))}")
+    print(f"Gini Impurity (Train) = {(treeModel.score(xTrain, yTrain))}")
+    print(f"Gini Impurity (Test) = {(treeModel.score(xTest, yTest))}")
 
-    cm = confusion_matrix(yTrain, pred)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(yTrain))
-    disp.plot(cmap=plt.cm.Blues)
-    plt.title('Decision Tree CM')
+    for i in range(pred.shape[0]):
+        if int(pred[i]) == 1:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "r")
+        
+        elif int(pred[i]) == 2:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "g")
+
+        elif int(pred[i]) == 3:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "y")
+
+        elif int(pred[i]) == 4:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "m")
+
+        elif int(pred[i]) == 5:
+            plt.scatter(x=xTrain[i, 0], y = xTrain[i, 1], marker = "o", color = "k")
+    
+    plt.title("Decision Tree")
+    plt.xlabel("Mean")
+    plt.ylabel("Variance")
     plt.show()
+
+    # display confusion matrix for class assignments
+    if cm:
+        cm = confusion_matrix(yTrain, pred)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(yTrain))
+        disp.plot(cmap=plt.cm.Blues)
+        plt.title('Decision Tree CM')
+        plt.show()
     return
 
 # main code execution
 if __name__ == "__main__":
-    data = np.array(processedData)
-    for i in range(data.shape[0]):
-        if categoryFreq[data[i, 2]] < 30:
-            data[i, 2] = "Miscellaneous"
-
-    twoClassData = []
-    for i in range(data.shape[0]):
-        if data[i, 2] == "Miscellaneous" or data[i, 2] == "RPI RATHSKELLAR 2        TROY         NY":
-            twoClassData.append(data[i, :])
+    sample1 = np.array([[sub_arr[0], sub_arr[1], sub_arr[3]] for sub_arr in processedData])
+    sample2 = np.array([[sub_arr[0], sub_arr[2], sub_arr[3]] for sub_arr in processedData])
+    
+    for i in range(sample1.shape[0]):
+        if categoryFreq[sample1[i, 2]] < 30:
+            sample1[i, 2] = "Miscellaneous"
+            sample2[i, 2] = "Miscellaneous"
 
     maxLabel = -1
-    for i in range(data.shape[0]):
-        if data[i, 2] != "Miscellaneous":
-            label = data[i, 2]
-            data[i, 2] = classLabels[label]
+    for i in range(sample1.shape[0]):
+        if sample1[i, 2] != "Miscellaneous":
+            label = sample1[i, 2]
+            sample1[i, 2] = classLabels[label]
+            sample2[i, 2] = classLabels[label]
             if maxLabel < classLabels[label]: maxLabel = classLabels[label]
     
-    for i in range(data.shape[0]):
-        if data[i, 2] == "Miscellaneous":
-            data[i, 2] = maxLabel + 1
+    for i in range(sample1.shape[0]):
+        if sample1[i, 2] == "Miscellaneous":
+            sample1[i, 2] = maxLabel + 1
+            sample2[i, 2] = maxLabel + 1
 
-    # shuffled = np.array(twoClassData)
-    # # rng = np.random.default_rng()
-    # # permuted = rng.permutation(shuffled,axis=0)
-    # permuted = np.copy(shuffled)
-    # np.random.shuffle(permuted)
-    # plotpermuted = permuted[:,0:2].astype(np.float64)
-
-    # split = int(shuffled.shape[0]*.8)
-    # inputTrain = shuffled[:split, 0:2]
-    # inputTest = shuffled[split:, 0:2]
-    # labelTrain = shuffled[:split,2]
-    # labelTest = shuffled[split:2]
-    inputTrain, inputTest, labelTrain, labelTest = train_test_split(data[:, 0:2], data[:, 2], test_size=0.2, random_state=None)
-    # inputScalar = preprocessing.StandardScaler().fit_transform(inputTrain)
+    SHOW_CM = False
+    data = sample1
+    inputTrain, inputTest, labelTrain, labelTest = train_test_split(data[:, 0:2], data[:, 2], test_size=0.25, random_state=None)
     plotKMeans(inputTrain, labelTrain, inputTest, labelTest, 5)
-    plotSVM(inputTrain, labelTrain, inputTest, labelTest)
-    plotDecisionTree(inputTrain, labelTrain, inputTest, labelTest)
+    plotSVM(inputTrain, labelTrain, inputTest, labelTest, SHOW_CM)
+    plotDecisionTree(inputTrain, labelTrain, inputTest, labelTest, SHOW_CM)
     
