@@ -138,7 +138,7 @@ def plotKMeans(xTrain, yTrain, xTest, yTest, k):
     return
 
 # function for implementing SVM classifier
-def plotSVM(xTrain, yTrain, xTest, yTest, cm = False, TRAIN_OR_TEST = 0):
+def plotSVM(xTrain, yTrain, xTest, yTest, cm = False):
     #computing using linear kernal
     linearModel = svm.SVC(kernel = "linear")
     linearModel.fit(xTrain, yTrain)
@@ -190,7 +190,6 @@ def plotSVM(xTrain, yTrain, xTest, yTest, cm = False, TRAIN_OR_TEST = 0):
     plt.xlabel("Mean")
     plt.ylabel("Variance")
     plt.show()
-
 
     print(f"Linear Kernel (Train) = {(linearModel.score(xTrain, yTrain))}")
     print(f"Linear Kernel (Test) = {(linearModel.score(xTest, yTest))}")
@@ -254,7 +253,6 @@ def plotDecisionTree(xTrain, yTrain, xTest, yTest, cm = False):
 if __name__ == "__main__":
     sample1 = np.array([[sub_arr[0], sub_arr[1], sub_arr[3]] for sub_arr in processedData])
     sample2 = np.array([[sub_arr[0], sub_arr[2], sub_arr[3]] for sub_arr in processedData])
-    
     for i in range(sample1.shape[0]):
         if categoryFreq[sample1[i, 2]] < 30:
             sample1[i, 2] = "Miscellaneous"
@@ -276,7 +274,7 @@ if __name__ == "__main__":
     SHOW_CM = False
     data = sample1
     inputTrain, inputTest, labelTrain, labelTest = train_test_split(data[:, 0:2], data[:, 2], test_size=0.25, random_state=None)
+    
     plotKMeans(inputTrain, labelTrain, inputTest, labelTest, 5)
     plotSVM(inputTrain, labelTrain, inputTest, labelTest, SHOW_CM)
     plotDecisionTree(inputTrain, labelTrain, inputTest, labelTest, SHOW_CM)
-    
